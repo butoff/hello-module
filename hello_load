@@ -1,0 +1,18 @@
+#/bin/sh
+
+device="hello"
+mode=664
+
+/sbin/insmod ./hello.ko $* || exit 1
+
+# remove stale nodes
+rm -f /dev/${device}[0-3]
+
+major=$(awk '$2=="hello" {print $1}' /proc/devices)
+
+for i in 0 1 2 3
+do
+    mknod /dev/$device$i c $major $i
+    chgrp staff /dev/$device$i
+    chmod $mode /dev/$device$i
+done
