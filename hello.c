@@ -11,6 +11,42 @@ MODULE_LICENSE("GPL");
 static int major;
 static int minor;
 
+
+loff_t hello_llseek(struct file *filp, loff_t off, int i)
+{
+    return 0;
+}
+
+ssize_t hello_read(struct file *filp, char * __user cp, size_t size, loff_t *off)
+{
+    return 0;
+}
+
+ssize_t hello_write(struct file *filp, const char * __user cp, size_t size, loff_t *off)
+{
+    return 0;
+}
+
+int hello_open(struct inode *node, struct file *filp)
+{
+    return 0;
+}
+
+int hello_release(struct inode *node, struct file *filp)
+{
+    return 0;
+}
+
+struct file_operations hello_fops = {
+    .owner = THIS_MODULE,
+    .llseek = hello_llseek,
+    .read = hello_read,
+    .write = hello_write,
+//    .ioctl = hello_ioctl,
+    .open = hello_open,
+    .release = hello_release,
+};
+
 static __init int hello_init(void)
 {
     dev_t dev;
