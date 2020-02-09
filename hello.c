@@ -1,3 +1,4 @@
+#include <linux/cdev.h>
 #include <linux/fs.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -11,6 +12,15 @@ MODULE_LICENSE("GPL");
 static int major;
 static int minor;
 
+struct hello_dev {
+    /* struct hello_qset *data; */
+    int quantum;
+    int qset;
+    unsigned long size;
+    unsigned int access_key;
+    struct semaphore sem;
+    struct cdev cdev;
+};
 
 loff_t hello_llseek(struct file *filp, loff_t off, int i)
 {
@@ -27,8 +37,16 @@ ssize_t hello_write(struct file *filp, const char * __user cp, size_t size, loff
     return 0;
 }
 
-int hello_open(struct inode *node, struct file *filp)
+int hello_open(struct inode *inode, struct file *filp)
 {
+    struct hello_dev *dev;
+    dev = container_of(inode->i_cdev, struct hello_dev, cdev);
+    filp->private_data = dev;
+
+    /* trim the length if write-only */
+    if ((filp->f_flags & O_ACCMODE) == O_WRONLY) {
+        /*hello_trim(dev);*/
+    }
     return 0;
 }
 
@@ -42,18 +60,30 @@ struct file_operations hello_fops = {
     .llseek = hello_llseek,
     .read = hello_read,
     .write = hello_write,
-//    .ioctl = hello_ioctl,
+/*    .ioctl = hello_ioctl, */
     .open = hello_open,
     .release = hello_release,
 };
 
+static void hello_setup_cdev(struct hello_dev *dev, int index)
+{
+    int err, devno = MKDEV(major, minor + index);
+    
+    cdev_init(&dev->cdev, &hello_fops);
+    dev->cdev.owner = THIS_MODULE;
+    dev->cdev.ops = &hello_fops;
+    err = cdev_add(&dev->cdev, devno, 1);
+    /* fail gracefully if need be */
+    if (err) printk(KERN_NOTICE "Error %d adding hello%d", err, index);
+}
+
 static __init int hello_init(void)
 {
     dev_t dev;
-    int res;
+    int err;
 
-    res = alloc_chrdev_region(&dev, 0, COUNT, NAME);
-    if (res != 0) {
+    err = alloc_chrdev_region(&dev, 0, COUNT, NAME);
+    if (err != 0) {
         printk(KERN_INFO "can't alloc chrdev region\n");
         goto exit;
     } else {
