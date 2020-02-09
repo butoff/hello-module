@@ -22,6 +22,8 @@ struct hello_dev {
     struct cdev cdev;
 };
 
+static struct hello_dev hello_devices[COUNT];
+
 loff_t hello_llseek(struct file *filp, loff_t off, int i)
 {
     return 0;
@@ -40,6 +42,9 @@ ssize_t hello_write(struct file *filp, const char * __user cp, size_t size, loff
 int hello_open(struct inode *inode, struct file *filp)
 {
     struct hello_dev *dev;
+
+    printk(KERN_INFO "open hello file");
+
     dev = container_of(inode->i_cdev, struct hello_dev, cdev);
     filp->private_data = dev;
 
@@ -80,7 +85,7 @@ static void hello_setup_cdev(struct hello_dev *dev, int index)
 static __init int hello_init(void)
 {
     dev_t dev;
-    int err;
+    int i, err;
 
     err = alloc_chrdev_region(&dev, 0, COUNT, NAME);
     if (err != 0) {
@@ -92,17 +97,28 @@ static __init int hello_init(void)
         printk("allocated %d:%d\n", major, minor);
     }
 
+    for (i = 0; i < COUNT; i++) {
+        hello_setup_cdev(&hello_devices[i], i);
+    }
+
 exit:
     return 0;
 }
 
 static __exit void hello_exit(void)
 {
+    int i;
+
     if (major != 0) {
         printk(KERN_INFO "unregister %d:%d\n", major, minor);
         unregister_chrdev_region(MKDEV(major, minor), COUNT);
     } else {
         printk(KERN_INFO "chrdev region wasn't allocated, nothing to unregister\n");
+        return;
+    }
+
+    for (i = 0; i < COUNT; i++) {
+        cdev_del(&hello_devices[i].cdev);
     }
 }
 
