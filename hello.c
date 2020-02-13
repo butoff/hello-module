@@ -3,6 +3,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <asm/uaccess.h>
 
 #define COUNT   4
 #define NAME    "hello"
@@ -24,6 +25,9 @@ struct hello_dev {
 
 static struct hello_dev hello_devices[COUNT];
 
+static char *HELLO = "Hello!!!";
+static int fully_read = 0;
+
 loff_t hello_llseek(struct file *filp, loff_t off, int i)
 {
     return 0;
@@ -31,7 +35,11 @@ loff_t hello_llseek(struct file *filp, loff_t off, int i)
 
 ssize_t hello_read(struct file *filp, char * __user cp, size_t size, loff_t *off)
 {
-    return 0;
+    if (!fully_read) {
+        raw_copy_to_user(cp, HELLO, 6);
+        fully_read = 1;
+        return 6;
+    } else return 0;
 }
 
 ssize_t hello_write(struct file *filp, const char * __user cp, size_t size, loff_t *off)
