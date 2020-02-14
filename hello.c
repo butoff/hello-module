@@ -25,8 +25,11 @@ struct hello_dev {
 
 static struct hello_dev hello_devices[COUNT];
 
-static char *HELLO = "Hello!!!";
+#define DATA_SIZE   0x10
+
+static char data[0x100];
 static int fully_read = 0;
+static int fully_written = 0;
 
 loff_t hello_llseek(struct file *filp, loff_t off, int i)
 {
@@ -36,15 +39,20 @@ loff_t hello_llseek(struct file *filp, loff_t off, int i)
 ssize_t hello_read(struct file *filp, char * __user cp, size_t size, loff_t *off)
 {
     if (!fully_read) {
-        raw_copy_to_user(cp, HELLO, 6);
+        raw_copy_to_user(cp, data, 6);
         fully_read = 1;
         return 6;
-    } else return 0;
+    } else {
+        fully_read = 0;
+        return 0;
+    }
 }
 
 ssize_t hello_write(struct file *filp, const char * __user cp, size_t size, loff_t *off)
 {
-    return 0;
+    int written = size < DATA_SIZE ? size : DATA_SIZE;
+    raw_copy_from_user(data, cp, written);
+    return size;
 }
 
 int hello_open(struct inode *inode, struct file *filp)
